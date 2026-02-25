@@ -1,132 +1,67 @@
 # Perspective Projection
 
-In perspective projection, $\tan(\theta)$ represents the angle of the perspective triangle.  
-However, we do not directly use the angle — we want a **scalar value** that scales coordinates.  
-So we use:
+In perspective projection $\tan(\theta)$ is the angle of the perspective triangle but we want a scaler value like $\frac{1}{45} > \frac{1}{60}$ so we make $\frac{1}{\tan(\theta)}$.
+
+<p align="center">
+  <img src="images/wide-angle-vs-telephoto-lens.webp" width="500"/>
+</p>
+
+We have something called aspect ratio. It is a ratio of window width/window height and it is used to make objects have correct width like size because window is a rectangle not a square in most times.
+
+We multiply aspect ratio with $x$ and we multiply $\frac{1}{\tan(\theta)}$ with $x, y$ because we want object to appear smaller if field of view (FOV) bigger and appear bigger if FOV smaller.
+
+Then we have
 
 $$
-\frac{1}{\tan(\theta)}
+\frac{far + near}{far - near}
 $$
 
-This acts as a scaling factor.
-
-For example:
+and
 
 $$
-\frac{1}{45} > \frac{1}{60}
+\frac{2 \cdot far \cdot near}{far - near}
 $$
 
-So smaller angles produce stronger magnification.
+to normalize near and far from $-1$ to $1$ to make if object $z$ is like a big number it normalizes it from $-1$ to $1$ and this formula is found in the calculation of the non-linear depth in the GPU.
 
----
+Then the hard part.
 
-## Aspect Ratio
-
-We also have something called **aspect ratio**:
+Firstly lets call
 
 $$
-\text{aspect} = \frac{\text{window width}}{\text{window height}}
+\frac{far + near}{far - near}
 $$
 
-The window is usually a rectangle, not a square.  
-Without aspect ratio correction, objects would appear stretched.
-
-In the projection transformation:
-
-- $x$ is multiplied by the aspect ratio  
-- $x$ and $y$ are multiplied by $\frac{1}{\tan(\text{FOV}/2)}$
-
-This ensures:
-
-- Bigger FOV → objects appear smaller  
-- Smaller FOV → objects appear bigger  
-
----
-
-## Near and Far Plane Normalization
-
-To normalize depth into the range $[-1, 1]$, we introduce two constants:
+term $A$ and call
 
 $$
-A = \frac{f + n}{f - n}
+\frac{2 \cdot far \cdot near}{far - near}
 $$
 
-$$
-B = \frac{2fn}{f - n}
-$$
+$B$ because of multiplication of perspective projection matrix with the vertex $[X,Y,Z,W]$ components $A$ is being multiplied by $z$ and this is useful to make the normalization to $-1, 1$ correct so $(A \cdot Z + B)$ is the formula to make the z clip that is the z normalized $(-1,1)$.
 
-Where:
-
-- $n$ = near plane  
-- $f$ = far plane  
-
-These terms come directly from the perspective projection matrix.
-
----
-
-## Clip Space Z
-
-After multiplying the projection matrix with a vertex $[X, Y, Z, W]$, the clip-space Z becomes:
+So now we need to use this to calculate the non linear depth. To achieve that we can make
 
 $$
-Z_{\text{clip}} = A Z + B
+\frac{A \cdot Z}{-Z} + \frac{B}{-Z}
 $$
 
-In perspective projection:
+so it is
 
 $$
-W = -Z
+-A - \frac{B}{Z}
 $$
 
-So after the perspective divide:
+that is
 
 $$
-Z_{\text{ndc}} = \frac{A Z + B}{-Z}
+-A - B \cdot \frac{1}{Z}
 $$
 
-We can split it:
+so now we have two constants to normalize $z$ and the $\frac{1}{Z}$ to make depth non linear.
 
-$$
-Z_{\text{ndc}} = \frac{A Z}{-Z} + \frac{B}{-Z}
-$$
+We need depth non linear because imagine this if a tree is 3 meters from you so if you moved it 1 meter right you will see the effect clearly now imagine that the tree is 50 meters away if you moved the tree the same one meter you will not see the difference.
 
-$$
-Z_{\text{ndc}} = -A - \frac{B}{Z}
-$$
+In perspective projection geometry shrinks proportionally to $\frac{1}{Z}$ so if we want depth precision to match how perspective compresses space depth must also behave like $\frac{1}{Z}$ if depth was linear far objects would collapse into very tiny depth differences and cause massive Z-fighting.
 
-Now we clearly see two things:
-
-- $A$ and $B$ are constants used for normalization  
-- Depth depends on $\frac{1}{Z}$  
-
-This is where non-linear depth appears.
-
----
-
-## Why Depth Is Non-Linear
-
-Perspective projection scales geometry proportionally to:
-
-$$
-\frac{1}{Z}
-$$
-
-Imagine this:
-
-- If a tree is 3 meters away and moves 1 meter, you clearly see the change.
-- If a tree is 50 meters away and moves 1 meter, you barely see the difference.
-
-Because perspective shrinks geometry like $\frac{1}{Z}$, depth must also behave like $\frac{1}{Z}$.
-
-If depth were linear:
-
-- Far objects would collapse into very small depth differences  
-- This would cause severe Z-fighting  
-
-Non-linear depth:
-
-- Gives very high precision near the camera  
-- Gives less precision far away  
-- Matches how perspective compresses space  
-
-This is why GPUs use non-linear depth in perspective projection.
+Non-linear depth gives very high precision near camera and less precision far away which matches how perspective works.
