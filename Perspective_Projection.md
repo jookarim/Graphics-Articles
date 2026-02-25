@@ -69,3 +69,21 @@ We need depth non linear because imagine this if a tree is 3 meters from you so 
 In perspective projection geometry shrinks proportionally to $\frac{1}{Z}$ so if we want depth precision to match how perspective compresses space depth must also behave like $\frac{1}{Z}$ if depth was linear far objects would collapse into very tiny depth differences and cause massive Z-fighting.
 
 Non-linear depth gives very high precision near camera and less precision far away which matches how perspective works.
+
+## Full Perspective Projection Matrix
+
+```math
+P =
+\begin{bmatrix}
+\frac{1}{\text{aspect} \tan(\frac{\text{FOV}}{2})} & 0 & 0 & 0 \\
+0 & \frac{1}{\tan(\frac{\text{FOV}}{2})} & 0 & 0 \\
+0 & 0 & \frac{f + n}{f - n} & \frac{2fn}{f - n} \\
+0 & 0 & -1 & 0
+\end{bmatrix}
+```
+
+Where:
+
+```math
+\text{aspect} = \frac{\text{window width}}{\text{window height}}
+```
