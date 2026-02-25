@@ -8,6 +8,10 @@ In perspective projection $\tan(\theta)$ is the angle of the perspective triangl
 
 We have something called aspect ratio. It is a ratio of window width/window height and it is used to make objects have correct width like size because window is a rectangle not a square in most times.
 
+<p align="center">
+  <img src="images/aspect-ratio.png" width="500"/>
+</p>
+
 We multiply aspect ratio with $x$ and we multiply $\frac{1}{\tan(\theta)}$ with $x, y$ because we want object to appear smaller if field of view (FOV) bigger and appear bigger if FOV smaller.
 
 Then we have
